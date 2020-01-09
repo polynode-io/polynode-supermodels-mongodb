@@ -80,22 +80,20 @@ const validate = (jsonSchema: {}, data: {}): { success: boolean, errors: Array<{
 };
 
 const getConnectedMongooseModel = function(
-  conn: mongoose$Connection,
+  dbConnection: mongoose$Connection,
   schemaName: string,
-  schemaObj?: null | {} = null,
-  appSchemaOptions?: null | {} = null
+  schemaObj: {},
+  appSchemaOptions: {}
 ) {
-  if (conn == null) {
-    this.log.error({}, '- ERROR: DB is not ready!');
-  } else {
-    this.log.trace({ schemaName }, 'Loading model');
-    if (schemaObj) {
-      const model = conn.model(schemaName, schemaObj);
-      model._appSchemaOptions = appSchemaOptions;
-      return model;
-    }
-    return conn.model(schemaName);
+  if (!dbConnection) {
+    this.log.fatal({}, 'No db connection... (fatal)');
+    throw new Error('NoDBConnection');
   }
+
+  this.log.trace({ schemaName }, 'Loading model');
+  const model = dbConnection.model(schemaName, schemaObj);
+  model._appSchemaOptions = appSchemaOptions;
+  return model;
 };
 
 const buildModel = (
@@ -104,6 +102,7 @@ const buildModel = (
   schemaOptions: {},
   appSchemaOptions: AppSchemaOptions = {}
 ): GeneratedDependencyFunction => {
+  let requires: Array<string> = [];
   const schemaObj = new Schema(schemaDefs, schemaOptions);
 
   if ('pre' in appSchemaOptions && appSchemaOptions.pre) {
@@ -114,22 +113,39 @@ const buildModel = (
     applyHooksToSchema(schemaObj, 'post', appSchemaOptions.post);
   }
 
-  console.log('inside buildModel for: ', schemaName);
+  if (
+    'requires' in appSchemaOptions &&
+    appSchemaOptions.requires &&
+    appSchemaOptions.requires.length > 0
+  ) {
+    requires = appSchemaOptions.requires;
+  }
 
-  return ({ db, log }: { db: DatabaseType, log: LoggerType }) => {
-    console.log('inside buildModel function for: ', schemaName);
+  return (depsContainer: { db: DatabaseType, log: LoggerType }) => {
+    const { db, log } = depsContainer;
+    log.trace({ schemaName }, 'inside buildModel function');
+
+    if (requires.length > 0) {
+      // resolve dependencies.
+      requires.forEach(requireName => depsContainer[requireName]);
+    }
 
     let model: mongoose$Model;
 
     try {
-      model = getConnectedMongooseModel.bind({ log })(db.getConnection(), schemaName);
-    } catch (err) {
       model = getConnectedMongooseModel.bind({ log })(
         db.getConnection(),
         schemaName,
         schemaObj,
         appSchemaOptions
       );
+      console.log('model is: ', model);
+    } catch (err) {
+      log.fatal(
+        { err, schemaName, schemaObj, appSchemaOptions },
+        'Error generating Mongoose-connected model!'
+      );
+      process.exit(1);
     }
 
     if (!model) {
