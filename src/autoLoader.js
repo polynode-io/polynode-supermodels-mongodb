@@ -34,11 +34,11 @@ const getDependencyName = function(modulePath: string, name: string) {
   const splat: string = modulePath.split('/');
   let i = 2;
   const lasts = [];
-  this.log.trace({}, 'getDependencyName starts.');
+  // this.log.trace({}, 'getDependencyName starts.');
   do {
     const tNamespace = splat[splat.length - i];
     if (validNamespaces.indexOf(tNamespace) > -1) {
-      this.log.trace({}, 'valid namespace: ' + tNamespace);
+      //  this.log.trace({}, 'valid namespace: ' + tNamespace);
       const rootName = lasts.join('');
       const forceSingular = tNamespace === 'models' || tNamespace === 'controllers';
 
@@ -53,7 +53,7 @@ const getDependencyName = function(modulePath: string, name: string) {
 
       const ret = rootName + name + moduleTypeName;
 
-      this.log.trace({}, modulePath + ' resolves to: ' + ret);
+      //  this.log.trace({}, modulePath + ' resolves to: ' + ret);
 
       return ret;
     } else {
@@ -72,7 +72,7 @@ const autoLoader = (getContainer, { config }) => {
   log.trace({}, 'Autoloader starts.');
 
   return new Promise((resolve, reject) => {
-    log.trace({}, 'Promise starts.');
+    // log.trace({}, 'Promise starts.');
 
     getContainer().loadModules(
       [
@@ -105,7 +105,7 @@ const autoLoader = (getContainer, { config }) => {
       const depName = getDependencyName.bind({ log })(modulePath, name);
 
       const res = getContainer().resolve(depName);
-      console.log({ res }, 'module resolved');
+      // console.log({ res }, 'module resolved');
       if (isLast) {
         resolve(true);
       }
