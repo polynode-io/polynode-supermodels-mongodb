@@ -64,6 +64,8 @@ const getDependencyName = function(modulePath: string, name: string) {
   throw new Error('Cant determine dep name for: ' + modulePath);
 };
 
+const defaultGlobs = ['/**/*.js'];
+
 const autoLoader = (getContainer, { config }) => {
   const log = getContainer()
     .resolve('log')
@@ -71,46 +73,48 @@ const autoLoader = (getContainer, { config }) => {
 
   log.trace({}, 'Autoloader starts.');
 
-  return new Promise((resolve, reject) => {
-    // log.trace({}, 'Promise starts.');
+  const useGlobs = config.MODULE_GLOBS || defaultGlobs;
 
-    getContainer().loadModules(
-      [
-        [
-          config.MODELS_PATH + '/**/*.js',
-          {
-            register: awilix.asFunction,
-            lifetime: awilix.Lifetime.SINGLETON,
-          },
-        ],
-        config.CONTROLLERS_PATH + '/**/*.js',
-        config.ROUTES_PATH + '/**/*.js',
-      ],
-      {
-        formatName: (name, descriptor) => getDependencyName.bind({ log })(descriptor.path, name),
-        resolverOptions: {
-          lifetime: awilix.Lifetime.SINGLETON,
-          register: awilix.asFunction,
-        },
-      }
-    );
+	return new Promise((resolve, reject) => {
+		// log.trace({}, 'Promise starts.');
 
-    const routeModules = awilix.listModules([
-      //  config.MODELS_PATH + '/**/*.js',
-      config.ROUTES_PATH + '/**/*.js',
-    ]);
+		getContainer().loadModules(
+			useGlobs.reduce((last, cGlob) => {
+				const additionalModules = [                                                                                   
+					[                                                                            
+						config.MODELS_PATH + cGlob,
+						{               
+							register: awilix.asFunction,
+							lifetime: awilix.Lifetime.SINGLETON,
+						},
+					],
+					config.CONTROLLERS_PATH + cGlob,
+					config.ROUTES_PATH + cGlob,
+				];
+				return [...last,additionalModules];
+			},[]),
+			{
+				formatName: (name, descriptor) => getDependencyName.bind({ log })(descriptor.path, name),
+				resolverOptions: {
+					lifetime: awilix.Lifetime.SINGLETON,
+					register: awilix.asFunction,
+				},
+			}
+		);
 
-    routeModules.forEach(({ path: modulePath, name }, idx: number) => {
-      const isLast = idx === routeModules.length - 1;
-      const depName = getDependencyName.bind({ log })(modulePath, name);
+		const routeModules = awilix.listModules(useGlobs.map((cGlob) => (config,ROUTES_PATH + cGlob)));
 
-      const res = getContainer().resolve(depName);
-      // console.log({ res }, 'module resolved');
-      if (isLast) {
-        resolve(true);
-      }
-    });
-  });
+		routeModules.forEach(({ path: modulePath, name }, idx: number) => {
+			const isLast = idx === routeModules.length - 1;
+			const depName = getDependencyName.bind({ log })(modulePath, name);
+
+			const res = getContainer().resolve(depName);
+			// console.log({ res }, 'module resolved');
+			if (isLast) {
+				resolve(true);
+			}
+		});
+	});
 };
 
 module.exports = { autoLoader };
