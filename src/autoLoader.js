@@ -90,7 +90,7 @@ const autoLoader = (getContainer, { config }) => {
 					config.CONTROLLERS_PATH + cGlob,
 					config.ROUTES_PATH + cGlob,
 				];
-				return [...last,additionalModules];
+				return [...last,...additionalModules];
 			},[]),
 			{
 				formatName: (name, descriptor) => getDependencyName.bind({ log })(descriptor.path, name),
