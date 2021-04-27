@@ -77,7 +77,6 @@ const autoLoader = (getContainer, { config }) => {
 
 	return new Promise((resolve, reject) => {
 		// log.trace({}, 'Promise starts.');
-
 		getContainer().loadModules(
 			useGlobs.reduce((last, cGlob) => {
 				const additionalModules = [                                                                                   
@@ -102,7 +101,7 @@ const autoLoader = (getContainer, { config }) => {
 			}
 		);
 
-		const routeModules = awilix.listModules(useGlobs.map((cGlob) => (config,ROUTES_PATH + cGlob)));
+		const routeModules = awilix.listModules(useGlobs.map((cGlob) => (config.ROUTES_PATH + cGlob)));
 
 		routeModules.forEach(({ path: modulePath, name }, idx: number) => {
 			const isLast = idx === routeModules.length - 1;
